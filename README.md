@@ -8,5 +8,5 @@ had to be stripped out or replaced to get a DDP server working on it's own.
 Right now nothing works...working on that.
 
 TODO:
-    - Shim all Meteor functions
-    - Test that it works?
+* Shim all Meteor functions
+* Test that it works?
