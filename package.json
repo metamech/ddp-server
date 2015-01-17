@@ -1,0 +1,12 @@
+{
+    "name": "ddpserver",
+    "version": "0.0.1",
+    "main": "main.js",
+    "scripts": {
+        "start": "node main.js"
+    },
+    "dependencies": {
+        "underscore": ">=1.7.0",
+        "fibers": ">=1.0.5"
+    }
+}
