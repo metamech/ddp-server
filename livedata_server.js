@@ -478,6 +478,10 @@ _.extend(Session.prototype, {
     self.send(msg);
   },
 
+  /*
+   * NOTE: Anything about methods is not used ATM, we don't accept
+   * method invocation.
+   */
   // Process 'msg' as an incoming message. (But as a guard against
   // race conditions during reconnection, ignore the message if
   // 'socket' is not the currently connected socket.)
@@ -584,7 +588,6 @@ _.extend(Session.prototype, {
 
       var handler = self.server.publish_handlers[msg.name];
       self._startSubscription(handler, msg.id, msg.params, msg.name);
-
     },
 
     unsub: function (msg) {
@@ -592,83 +595,6 @@ _.extend(Session.prototype, {
 
       self._stopSubscription(msg.id);
     },
-
-    method: function (msg, unblock) {
-      var self = this;
-
-      // reject malformed messages
-      // For now, we silently ignore unknown attributes,
-      // for forwards compatibility.
-      if (typeof (msg.id) !== "string" ||
-          typeof (msg.method) !== "string" ||
-          (('params' in msg) && !(msg.params instanceof Array)) ||
-          (('randomSeed' in msg) && (typeof msg.randomSeed !== "string"))) {
-        self.sendError("Malformed method invocation", msg);
-        return;
-      }
-
-      var randomSeed = msg.randomSeed || null;
-
-      // set up to mark the method as satisfied once all observers
-      // (and subscriptions) have reacted to any writes that were
-      // done.
-      var fence = new DDPServer._WriteFence;
-      fence.onAllCommitted(function () {
-        // Retire the fence so that future writes are allowed.
-        // This means that callbacks like timers are free to use
-        // the fence, and if they fire before it's armed (for
-        // example, because the method waits for them) their
-        // writes will be included in the fence.
-        fence.retire();
-        self.send({
-          msg: 'updated', methods: [msg.id]});
-      });
-
-      // find the handler
-      var handler = self.server.method_handlers[msg.method];
-      if (!handler) {
-        self.send({
-          msg: 'result', id: msg.id,
-          error: new Meteor.Error(404, "Method not found")});
-        fence.arm();
-        return;
-      }
-
-      var setUserId = function(userId) {
-        self._setUserId(userId);
-      };
-
-      var invocation = new MethodInvocation({
-        isSimulation: false,
-        userId: self.userId,
-        setUserId: setUserId,
-        unblock: unblock,
-        connection: self.connectionHandle,
-        randomSeed: randomSeed
-      });
-      try {
-        var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
-          return DDP._CurrentInvocation.withValue(invocation, function () {
-            return maybeAuditArgumentChecks(
-              handler, invocation, msg.params, "call to '" + msg.method + "'");
-          });
-        });
-      } catch (e) {
-        var exception = e;
-      }
-
-      fence.arm(); // we're done adding writes to the fence
-      unblock(); // unblock, if the method hasn't done it already
-
-      exception = wrapInternalException(
-        exception, "while invoking method '" + msg.method + "'");
-
-      // send response and add to cache
-      var payload =
-        exception ? {error: exception} : (result !== undefined ?
-                                          {result: result} : {});
-      self.send(_.extend({msg: 'result', id: msg.id}, payload));
-    }
   },
 
   _eachSub: function (f) {
@@ -1228,8 +1154,6 @@ Server = function (options) {
   self.publish_handlers = {};
   self.universal_publish_handlers = [];
 
-  self.method_handlers = {};
-
   self.sessions = {}; // map from id to session
 
   self.stream_server = new StreamServer;
@@ -1435,108 +1359,6 @@ _.extend(Server.prototype, {
     }
   },
 
-  /**
-   * @summary Defines functions that can be invoked over the network by clients.
-   * @locus Anywhere
-   * @param {Object} methods Dictionary whose keys are method names and values are functions.
-   * @memberOf Meteor
-   */
-  methods: function (methods) {
-    var self = this;
-    _.each(methods, function (func, name) {
-      if (self.method_handlers[name])
-        throw new Error("A method named '" + name + "' is already defined");
-      self.method_handlers[name] = func;
-    });
-  },
-
-  call: function (name /*, arguments */) {
-    // if it's a function, the last argument is the result callback,
-    // not a parameter to the remote method.
-    var args = Array.prototype.slice.call(arguments, 1);
-    if (args.length && typeof args[args.length - 1] === "function")
-      var callback = args.pop();
-    return this.apply(name, args, callback);
-  },
-
-  // @param options {Optional Object}
-  // @param callback {Optional Function}
-  apply: function (name, args, options, callback) {
-    var self = this;
-
-    // We were passed 3 arguments. They may be either (name, args, options)
-    // or (name, args, callback)
-    if (!callback && typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-    options = options || {};
-
-    if (callback)
-      // It's not really necessary to do this, since we immediately
-      // run the callback in this fiber before returning, but we do it
-      // anyway for regularity.
-      // XXX improve error message (and how we report it)
-      callback = Meteor.bindEnvironment(
-        callback,
-        "delivering result of invoking '" + name + "'"
-      );
-
-    // Run the handler
-    var handler = self.method_handlers[name];
-    var exception;
-    if (!handler) {
-      exception = new Meteor.Error(404, "Method not found");
-    } else {
-      // If this is a method call from within another method, get the
-      // user state from the outer method, otherwise don't allow
-      // setUserId to be called
-      var userId = null;
-      var setUserId = function() {
-        throw new Error("Can't call setUserId on a server initiated method call");
-      };
-      var connection = null;
-      var currentInvocation = DDP._CurrentInvocation.get();
-      if (currentInvocation) {
-        userId = currentInvocation.userId;
-        setUserId = function(userId) {
-          currentInvocation.setUserId(userId);
-        };
-        connection = currentInvocation.connection;
-      }
-
-      var invocation = new MethodInvocation({
-        isSimulation: false,
-        userId: userId,
-        setUserId: setUserId,
-        connection: connection,
-        randomSeed: makeRpcSeed(currentInvocation, name)
-      });
-      try {
-        var result = DDP._CurrentInvocation.withValue(invocation, function () {
-          return maybeAuditArgumentChecks(
-            handler, invocation, EJSON.clone(args), "internal call to '" +
-              name + "'");
-        });
-      } catch (e) {
-        exception = e;
-      }
-    }
-
-    // Return the result in whichever way the caller asked for it. Note that we
-    // do NOT block on the write fence in an analogous way to how the client
-    // blocks on the relevant data being visible, so you are NOT guaranteed that
-    // cursor observe callbacks have fired when your callback is invoked. (We
-    // can change this if there's a real use case.)
-    if (callback) {
-      callback(exception, result);
-      return undefined;
-    }
-    if (exception)
-      throw exception;
-    return result;
-  },
-
   _urlForSession: function (sessionId) {
     var self = this;
     var session = self.sessions[sessionId];
@@ -1559,7 +1381,6 @@ var calculateVersion = function (clientSupportedVersions,
 };
 
 LivedataTest.calculateVersion = calculateVersion;
-
 
 // "blind" exceptions other than those that were deliberately thrown to signal
 // errors to the client
