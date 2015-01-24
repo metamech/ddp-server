@@ -1,31 +1,12 @@
 if (Meteor.isClient) {
 
-  var ReactiveRandom = {
-      randomDep: new Deps.Dependency,
-      randomNum: Math.random(),
-    
-      get: function() {
-          var self = this;
-          self.randomDep.depend();
-          return self.randomNum;
-      },
-      
-      change: function() { 
-          var self = this;
-          self.randomNum = Math.random();
-          self.randomDep.changed();
-      },
-  };
+  var random = new Streams.Stream("4", 1000);
   
   Template.hello.helpers({
     random: function () {
-        return ReactiveRandom.get(); 
+        return random.get(); 
     }
   });
-  
-  setInterval(function() {
-      ReactiveRandom.change();
-  }, 1000);
 }
 
 if (Meteor.isServer) {
