@@ -8,19 +8,21 @@
 
 Streams = {};
 
-/*
- *  Returns a ReactiveVar for the stream with the entered stream ID.
- */
 Stream = function(id) {
     var self = this;
-    self.value = new ReactiveVar(Math.random());
     self.id = id;
     
     // TODO(stephen): Validate whether the user has access to this stream...somehow.
+    // I'm assuming that it won't matter here and will only matter when server calls
+    // are made by the functions below.
 };
 
 Stream.prototype.trackData = function(selector, variable) {
     return new Datum(selector, variable);
+}
+
+Stream.prototype.trackStat = function(selector, options, variable) {
+    return new Stat(selector, options, variable);
 }
 
 Stream.prototype.id = function() {

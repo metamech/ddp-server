@@ -1,7 +1,7 @@
-Datum = function(selector, variable) {
+Stat = function(selector, options, variable) {
     var self = this;
     self.selector = selector;
-    self.type = variable;
+    self.variable = variable;
     
     // TODO(stephen): Check whether the selector exists and return error(?) if
     //                it doesn't.
@@ -11,34 +11,34 @@ Datum = function(selector, variable) {
     self.handle = setInterval(function() {
         self.value.set(Math.random());
     }, 1000);
-};
+}
 
-Datum.prototype.get = function() {
+Stat.prototype.get = function() {
     var self = this;
     return self.value.get();
 };
 
-Datum.prototype.selector = function() {
+Stat.prototype.selector = function() {
     var self = this;
     return self.selector;
 };
 
-Datum.prototype.variable = function() {
+Stat.prototype.variable = function() {
     var self = this;
     return self.variable;
 };
 
-Datum.prototype.isRunning = function() {
+Stat.prototype.isRunning = function() {
     var self = this;
     return !self.stopped;
 };
 
-Datum.prototype.isStopped = function() {
+Stat.prototype.isStopped = function() {
     var self = this;
     return self.stopped;
 };
 
-Datum.prototype.stop = function() {
+Stat.prototype.stop = function() {
     var self = this;
     if (self.stopped === false) {
         self.handle.stop();

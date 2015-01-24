@@ -7,9 +7,14 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.0.2.1');
-  api.use('reactive-var');
-  api.addFiles('datum.js');
-  api.addFiles('stream.js');
+  api.use('reactive-var', ['client']);
+  api.addFiles('client/datum.js', ['client']);
+  api.addFiles('client/stat.js', ['client']);
+  api.addFiles('client/stream.js', ['client']);
+  
+  api.addFiles('server/datum.js', ['server']);
+  api.addFiles('server/stat.js', ['server']);
+  api.addFiles('server/stream.js', ['server']);
 
   api.export('Streams');
 });
