@@ -7,13 +7,15 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.0.2.1');
-  api.export('Streams');
   api.use('reactive-var');
-  api.addFiles('stephen:stream.js');
+  api.addFiles('datum.js');
+  api.addFiles('stream.js');
+
+  api.export('Streams');
 });
 
 Package.onTest(function(api) {
   api.use('tinytest');
-  api.use('stephen:stream');
-  api.addFiles('stephen:stream-tests.js');
+  api.use('stream');
+  api.addFiles('stream-tests.js');
 });

@@ -1,6 +1,7 @@
 if (Meteor.isClient) {
 
-  var random = new Streams.Stream("4", 1000);
+  var stream = new Streams.Stream("4");
+  var random = stream.trackData("", "temperature");
   
   Template.hello.helpers({
     random: function () {
