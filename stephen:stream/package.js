@@ -8,6 +8,11 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.0.2.1');
   api.use('reactive-var', ['client']);
+  api.use('underscore', ['client']);
+  
+  api.addFiles('client/minipassthrough.js', ['client']);
+  api.addFiles('client/local_collection_driver.js', ['client']);
+  api.addFiles('client/passthrough_collection.js', ['client']);
   api.addFiles('client/datum.js', ['client']);
   api.addFiles('client/stat.js', ['client']);
   api.addFiles('client/stream.js', ['client']);

@@ -8,23 +8,17 @@ Datum = function(selector, variable) {
     //                command returns empty.
     
     self.useId = Random.id();
-    self.collection = new Meteor.Collection('DataStream');
+    self.collection = new Meteor.PassthroughCollection('DataStream');
     self.subscription = null;
     self.value = new ReactiveVar(Math.random());
     
     // We tell the server to send datum values using the ID that we send
     // when we subscribe. 
-    self.collection.find({}).observe({
-        "added": function(e) {
-            if (e._id === self.useId) {
-                self.value.set({value: e.value, time: e.date});
-            } else {
-                console.log("Not using ID: ", e);
-            }
-        },
+    self.collection.observe({
         "changed": function(e) {
+            console.log("changed: " + JSON.stringify(e));
             if (e._id === self.useId) {
-                self.value.set({value: e.value, time: e.date});
+                self.value.set({value: e.fields.value, time: e.fields.date});
             } else {
                 console.log("Not using ID: ", e);
             }
