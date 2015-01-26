@@ -56,9 +56,6 @@ Meteor.PassthroughCollection.prototype._factory = function(name, options) {
         options._driver = LocalCollectionDriver;
     }
     
-    // TODO(stephen): create connection here if needed.  A passthrough won't need 
-    // a backing store so might just delete this later when it's confirmed that we're
-    // good without.
     self._collection = options._driver.open(name, self.connection); 
     self._name = name || "";
     
