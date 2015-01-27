@@ -4,8 +4,7 @@ Datum = function(selector, variable) {
     self.variable = variable;
     
     // TODO(stephen): Check whether the selector exists and return error(?) if
-    //                it doesn't.  Probably will just return error if the subscribe
-    //                command returns empty.
+    //                it doesn't.  
     
     self.useId = Random.id();
     self.collection = new Meteor.PassthroughCollection('DataStream');

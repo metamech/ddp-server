@@ -1,12 +1,11 @@
-// A data stream, use publish to 'added' and initial value and use 'change'
-// to modify it.  Basically there will only be one value in the 'cursor' at 
-// a time.
+// A data stream, use publish get in a selector, and pass data 'change' events
+// when modified.  
 Meteor.publish("DataStream", function(selector, useId) {
     var self = this;
     check(useId, String);
     // TODO(stephen): validate permissions
     // TODO(stephen): validate selector and get values for datum.
-    console.log("Opening datum with ID:", useId, "and selector:", selector);
+    console.log("Datum: Opening datum with ID:", useId, "and selector:", selector);
     
     // set initial value
     self.added("DataStream", useId, {value: Math.random(), date: Date.now()});
@@ -17,7 +16,7 @@ Meteor.publish("DataStream", function(selector, useId) {
     }, 1000);
     
     self.onStop(function() {
-        console.log("Closing: ", useId);
+        console.log("Datum: Closing: ", useId);
         Meteor.clearInterval(self.handle);
     });
 });
